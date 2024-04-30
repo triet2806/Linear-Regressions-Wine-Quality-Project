@@ -1,0 +1,1210 @@
+---
+title: "Linear Regression Models: Wine Quality Project"
+date: "2022-12-15"
+output:
+  pdf_document: default
+  html_document: default
+group members: blank
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+#### **STAT GU4205/5205**
+
+#### **Group Name: WQG**
+
+##### **Group members: Gabriel Rios; gr2693, Triet Vo; tmv2123, Mingcong Cai; mc5258, Bihan Qian; bq2150, Amanda Samuel; acs2352**
+
+#### Introduction
+
+The Wine Quality project contains two datasets related to white and red
+vinho verde wine samples, from the North of Portugal. The price of wine
+depends on a rather abstract concept of wine appreciation by wine
+tasters, opinions among whom may have a high degree of variability.
+Physicochemical tests are key factors in wine certification and quality
+assessment which are laboratory-based and take into account factors like
+acidity, pH level, the presence of sugar, and other chemical properties.
+For the wine market, it would be of interest if the human quality of
+tasting can be related to the chemical properties of wine so that the
+certification and quality assessment and assurance process is more
+controlled.
+
+Two datasets are available of which one dataset is on red wine and has
+1599 different varieties and the other is on white wine and has 4898
+varieties. All wines are produced in a particular area of Portugal. Data
+are collected on 12 different properties of the wines one of which is
+Quality, based on sensory data, and the rest are on chemical properties
+of the wines including density, acidity, alcohol content etc. All
+chemical properties of wines are continuous variables. Quality is an
+ordinal variable with a possible ranking from 1 (worst) to 10 (best).
+Each variety of wine is tasted by three independent tasters and the
+final rank assigned is the median rank given by the tasters. Below are
+columns that contained in our datasets:
+
+Alcohol: the amount of alcohol in wine Volatile acidity: are high acetic
+acid in wine which leads to an unpleasant vinegar taste Sulfates: a wine
+additive that contributes to SO2 levels and acts as an antimicrobial and
+antioxidant Citric Acid: acts as a preservative to increase acidity
+(small quantities add freshness and flavor to wines) Total Sulfur
+Dioxide: is the amount of free + bound forms of SO2 Density: sweeter
+wines have a higher density Chlorides: the amount of salt in the wine
+Fixed acidity: are non-volatile acids that do not evaporate readily pH:
+the level of acidity Free Sulfur Dioxide: it prevents microbial growth
+and the oxidation of wine Residual sugar: is the amount of sugar
+remaining after fermentation stops. The key is to have a perfect balance
+between --- sweetness and sourness (wines \> 45g/ltrs are sweet)
+
+\newpage
+#### Our main Research Question:
+
+**Whether quality scores (impression scores from the human tasting) are
+related to chemical compositions. Moreover, what physicochemical
+properties influence the quality score of wine? Utilizing two datasets,
+how would this relationship differ between red and white wine?**
+
+In taking quality as the response variable, we are trying to understand
+the variability in the wine quality through the variability of our
+predictor variables. Moreover, our interest is focused on which
+variables have the most impact on our response variable, wine quality,
+as well as seeing if any one of our independent variables has an
+influence over one another. Further, we want to know what measure of
+variables would result in the best wine, and what constitutes the best
+wine. We will be investigating this problem for both our red wine and
+white wine datasets which will then allow us to understand the
+physicochemical differences between red and white wine in relation to
+their respective quality. By investigating and comparing our best
+regression models for the two datasets, we will be able to accomplish
+the above goal. 
+
+Considering from more practical levels, our research based on the wine
+quality dataset can contribute to the wine producers by lower pricing
+cost and consumers in easier decision making. The idea of consumer
+perspective stems from the 'paradox of choice' (Schwartz 2004) which
+explores the psychology of decision-making. It introduces the idea that
+an increase in consumer choices creates higher levels of anxiety for the
+shopper. Schwartz presents the idea that one thing shoppers can do to
+reduce their shopping anxiety is to have a clear understanding of what
+they want. Unfortunately, developing an understanding of something as
+intricate as wine quality takes time, money, and effort many consumers
+cannot afford. For reference, the Institute of Culinary Education's
+sommelier training program costs \~\$10,000 and consists of 200 hours of
+instructional training. By applying regression analysis to the
+quantifiable properties of wine quality we hope to lower this barrier to
+entry and reduce shopper anxiety.
+
+```{r setup, include=FALSE}
+library(rdataretriever)
+library(ggplot2)
+library(rmarkdown)
+library(car)
+library(dplyr)
+wine_quality_red_data <- read.csv(file="wine_quality_red.csv",as.is=T, header=T)
+attach(wine_quality_red_data)
+
+n <- data.frame(fixed_acidity = wine_quality_red_data$fixed_acidity, volatile_acidity = wine_quality_red_data$volatile_acidity, citric_acid = wine_quality_red_data$citric_acid, residual_sugar = wine_quality_red_data$residual_sugar, chlorides = wine_quality_red_data$chlorides, free_sulfur_dioxide = wine_quality_red_data$free_sulfur_dioxide, total_sulfur_dioxide = wine_quality_red_data$total_sulfur_dioxide, density = wine_quality_red_data$density, ph = wine_quality_red_data$ph, sulphates = wine_quality_red_data$sulphates, alcohol = wine_quality_red_data$alcohol, quality = wine_quality_red_data$quality)
+```
+\newpage
+#### Variable transformations
+
+We first use scatterplot Matrix for Red Wine and checking for
+correlation between variables.
+```{r, fig.width=15, fig.height=15}
+plot(n)
+```
+
+Multicollinearity occurs when independent variables in a regression
+model are correlated. This correlation is a problem because independent
+variables should be independent. If the degree of correlation between
+variables is high enough, it will lead to the inaccuracy of the whole
+model. We need to be aware of it and dropping highly correlated
+variables in our model building.
+
+\newpage
+Checking for Normality: Histogram & Q-Q Plot
+
+```{r, echo = FALSE}
+par(mar = c(2, 2, .5, .5))
+par(mfrow = c(3,4))
+hist(fixed_acidity, cex.main =.8)
+hist(volatile_acidity, cex.main =.8)
+hist(citric_acid, cex.main =.8)
+hist(residual_sugar, cex.main =.8)
+hist(chlorides, cex.main =.8)
+hist(free_sulfur_dioxide, cex.main =.8)
+hist(total_sulfur_dioxide, cex.main =.8)
+hist(density, cex.main =.8)
+hist(ph, cex.main =.8)
+hist(sulphates, cex.main =.8)
+hist(alcohol, cex.main =.8)
+hist(quality, cex.main =.8)
+```
+
+Most 'normal' looking histograms: fixed_acidity, density, ph, and maybe
+volatile acidity\
+Right-skewed distributions: Volatile acidity, citric acid, residual
+sugar, chlorides, free sulfur dioxide, total sulfur dioxide, sulphates,
+alcohol.
+
+Transforming predictors/Combine Predictors:
+
+Log transformation improved: fixed_acidity, volatile_acidity,
+total_sulfur_dioxide, sulphates, alcohol.
+
+Log transformation did not improve: citric_acid, residual_sugar,
+chlorides, free_sulfur_dioxide, and quality.
+
+```{r}
+par(mar = c(2, 2, 1, 1))
+par(mfrow = c(3,2))
+hist(log(fixed_acidity), cex.main =.8)
+hist(log(volatile_acidity), cex.main =.8)
+hist(log(total_sulfur_dioxide), cex.main =.8)
+hist(log(sulphates), cex.main =.8)
+hist(log(alcohol), cex.main =.8)
+```
+
+Using power transformation:
+
+```{r}
+par(mar = c(2, 2, 1, 1))
+par(mfrow = c(2,2))
+hist(sqrt(citric_acid), cex.main =.8)
+hist((residual_sugar)^(-1/2), cex.main =.8)
+hist((chlorides)^(-1/2), cex.main =.8)
+hist((free_sulfur_dioxide)^(1/3), cex.main =.8)
+```
+
+```{r, echo = FALSE}
+m1=lm(quality~log(fixed_acidity), data = wine_quality_red_data)
+m2=lm(quality~density, data = wine_quality_red_data)
+m3=lm(quality~ph, data = wine_quality_red_data)
+m4=lm(quality~log(volatile_acidity), data = wine_quality_red_data)
+m5=lm(quality~log(total_sulfur_dioxide), data = wine_quality_red_data)
+m6=lm(quality~log(sulphates), data = wine_quality_red_data)
+m7=lm(quality~log(alcohol), data = wine_quality_red_data)
+m8=lm(quality~sqrt(citric_acid), data = wine_quality_red_data)
+m9=lm(quality~I(residual_sugar^-(1/2)), data = wine_quality_red_data)
+m10=lm(quality~I(chlorides^(-1/2)), data = wine_quality_red_data)
+m11=lm(quality~I(free_sulfur_dioxide^(1/3)), data = wine_quality_red_data)
+```
+
+Thus, the final best transformation for the predictors are as follows:
+log(fixed_acidity), density, ph, log(volatile_acidity),
+log(total_sulfur_dioxide), log(sulphates), log(alcohol),
+sqrt(citric_acid), (residual_sugar)\^(-1/2), (chlorides)\^(-1/2),
+(free_sulfur_dioxide)\^(1/3)
+
+\newpage
+
+Below is the scatter plot matrix and q-q plots of the transformed
+variables:
+
+```{r, fig.width=20, fig.height=20}
+n1 <- data.frame(log(fixed_acidity), log(volatile_acidity), sqrt(citric_acid), 
+                 I(residual_sugar^-(1/2)), I(chlorides^-(1/2)), I(free_sulfur_dioxide^(1/3)), 
+                 log(total_sulfur_dioxide), density, 
+                 ph, log(sulphates), log(alcohol), quality)
+plot(n1)
+```
+
+```{r, echo = FALSE}
+residualsmodel1<-residuals(m1)
+residualsmodel2<-residuals(m2)
+residualsmodel3<-residuals(m3)
+residualsmodel4<-residuals(m4)
+residualsmodel5<-residuals(m5)
+residualsmodel6<-residuals(m6)
+residualsmodel7<-residuals(m7)
+residualsmodel8<-residuals(m8)
+residualsmodel9<-residuals(m9)
+residualsmodel10<-residuals(m10)
+residualsmodel11<-residuals(m11)
+```
+
+```{r, echo = FALSE}
+par(mar = c(3, 3, 1.5, 1.5))
+par(mfrow = c(3,4))
+qqnorm(residualsmodel1)
+qqnorm(residualsmodel2)
+qqnorm(residualsmodel3)
+qqnorm(residualsmodel4)
+qqnorm(residualsmodel5)
+qqnorm(residualsmodel6)
+qqnorm(residualsmodel7)
+qqnorm(residualsmodel8)
+qqnorm(residualsmodel9)
+qqnorm(residualsmodel10)
+qqnorm(residualsmodel11)
+```
+
+Looking at the Scatterplot Matrix for the transformed predictors:
+Because quality is numeric and not continuous, our graph when examining
+the relationship between quality and the predictors do not appear like a
+regular scatterplot. A better investigation would be using Generalized
+Linear Models where the error terms would allow our dependent variable
+to be continuous, though that is out of the scope of this class we
+attempted the GLM later on in the report. In comparing the the
+scatterplot matrix before and after the transformation, we will see that
+the bunching of points on the lines appear to clump towards the center
+and begin to sparse out at both ends of the line. Indicating that the
+transformation indeed normalized the data.
+
+Trying to use all these predictors will lead our model to suffer from
+overfitting, so we must proceed with caution.
+
+Looking at the scatterplot matrix and identifying collinearity, as well
+as an intuitive understanding each predictor variable and their relation
+to another on the physicochemical level, we decide to drop predictors:
+fixed_acidity and total_sulfur_dioxide. Looking at our scatterplot
+matrix of the transformed variable, we see high collinearity between
+free_sulfur_dioxide vs. total_sulfur_dioxide, between density vs.
+fixed_acidity, and between fixed acidity vs. ph. The multicollinearity
+of fixed_acidity must be addressed first, and thus dropping the
+predictor over density or ph is most logical. Furthermore, though each
+predictors do not have strong linear relationship with the dependent
+variable, we are interested in seeing when the dependent variables are
+combined in a multilinear model, how much more could it help to explain
+the association with the quality variable. Second, we see that there is
+indepedence and no strong correlation between the predictors that are
+not dropped. Third, we also checked for homoscedasticity and normality
+with the histograms and q-q plots above, proving the constant variance
+within our model. Thus, the 4 linear regression assumptions have been
+checked to proceed with our model building.
+
+#### Model building: Red wine dataset
+
+We begin first with the full model after addressing the
+multicollinearity issue.
+
+```{r}
+fullmodel<- lm(quality ~ density + ph + log(volatile_acidity) + log(sulphates) + log(alcohol) 
+               + sqrt(citric_acid) + I(residual_sugar^-(1/2)) + I(chlorides^(-1/2)) 
+               + I(free_sulfur_dioxide^(1/3)), 
+               data = wine_quality_red_data)
+
+```
+
+Removal of predictors due to non-signifant p-values. Model 2: in model 2
+we drop density and then conduct the anova(model2, fullmodel) test. With
+the p value of 0.5877, which suggests density should be removed as we
+fail to reject the NH. Then, we move to drop I(residual_sugar\^-(1/2))
+due to a nonsignificant p-value. When conducting anova(model3, model2),
+with a p-value of 0.4492, the test suggests residual sugar should be
+removed as we fail to reject the NH. A summary of model 3 indicates to
+drop I(free_sulfur_dioxide\^(1/3)), and as we conduct the anova(model4,
+model3) with the removal of the predictor, we receive a p-value of
+0.3082, which suggests free sulfur dioxide should be removed as we fail
+to reject the NH. Finally, running the summary for model 4 shows that
+all coefficients are significant and we can stop dropping predictors.
+
+```{r}
+model2<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) + 
+              sqrt(citric_acid) + I(residual_sugar^-(1/2)) + I(chlorides^(-1/2)) 
+            + I(free_sulfur_dioxide^(1/3)), data = wine_quality_red_data)
+anova(model2, fullmodel)
+
+model3<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) + 
+              sqrt(citric_acid) + I(chlorides^(-1/2)) + I(free_sulfur_dioxide^(1/3)), 
+            data = wine_quality_red_data)
+anova(model3, model2)
+
+model4<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) + 
+              sqrt(citric_acid) + I(chlorides^(-1/2)), data = wine_quality_red_data)
+anova(model4, model3)
+
+summary(model4)
+```
+
+We arrive at Model4:lm(quality \~ ph + log(volatile_acidity) +
+log(sulphates) + log(alcohol) + sqrt(citric_acid) + I(chlorides\^(-1/2))
+after reducing our full model.
+
+Added Variable Plot & Effect plot: From the model4, check the variable
+'sqrt(citric_acid)' (significant at 0.01 level) From avp, we see the
+residual of sqrt(citric_acid) regression on other variables shows
+significance which proves it cover the left part of other variables to
+quality and thus we should keep the sqrt(citric_acid). From effect plot, it is shows a linear plot.
+
+```{r, echo = FALSE}
+#add variable plot
+model_avp1<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) 
+                + I(chlorides^(-1/2)), data = wine_quality_red_data)
+model_avp2<-lm(sqrt(citric_acid) ~ ph + log(volatile_acidity) + log(sulphates) 
+               + log(alcohol) + I(chlorides^(-1/2)), data = wine_quality_red_data)
+avp<-lm(residuals(model_avp1)~residuals(model_avp2))
+summary(avp)
+par(mfrow = c(2,2))
+plot(avp)
+#Effect plot
+library(effects)
+sqrt_citric_acid=sqrt(citric_acid)
+model4_e<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) + sqrt_citric_acid + I(chlorides^(-1/2)), data = wine_quality_red_data)
+plot(Effect('sqrt_citric_acid', model4_e))
+```
+
+\newpage
+
+Thus, the final model for the ANOVA method of slowing dropping independent
+variables is model 4. We now move on to check model4's residuals:
+whether it is normally distributed to confirm homoscedasticity.
+
+```{r}
+ggplot(wine_quality_red_data,aes(model4$fitted.values,model4$residuals))+geom_point()
+```
+
+Specifically examining the residual vs. fitted values plot, we are able
+to check for homoscedasticity. The above graph appears the way it does
+because wine quality is not a continuous variable, whereby ratings can
+only be whole numbers from a scale of 1 to 10. This enforce our fitted
+values to be roughly whole numbers, hence the bands appear as such.
+
+We are technically breaking the rule, as we are supposed to use a
+continuous dependent variable in linear regression. However, because
+wine quality is an increasing value, higher wine quality scores are
+interpretable and meaningful to our analysis, and the range of the
+scores are relatively large (1 to 10), and the distribution of the
+scores varies reasonably across the range of available scores, we are
+able to treat wine quality as a continuous variable. However, our
+scatterplot will not show this, and what is observed are multiple linear
+lines.
+
+To interpret the above plot of residuals vs. fitted values, we look for
+areas where the dots are bunched across the bands. We see bunching of
+dots in specifically the middle bands, while lower or higher residual
+bands do not show the bunching. This indicates that our assumption of
+homoscedasticity, assumption of equal or similar variances in different
+predictor variable groups, is satisfied.
+
+Next, we use the working model and begin to examine outliers by looking
+at Residuals and Leverage through Cook's distance, studentized
+residuals, and hat_matrix.
+
+First, we will investigate on a case by case simple linear regression
+case for each predictor variable.
+
+model4\<- lm(quality \~ ph + log(volatile_acidity) + log(sulphates) +
+log(alcohol) + sqrt(citric_acid) + I(chlorides\^(-1/2)), data =
+wine_quality_red_data)
+
+ph: m3 log(volatile_acidity): m4 log(sulphates): m6 log(alcohol): m7
+sqrt(citric_acid): m8 I(chlorides\^(-1/2)): m10
+
+Determine Outliers, specifically on the chosen predictors. Regression
+analysis to see the impact of those outliers. Leverage and residual
+level.
+
+Outliers Test: 'The function outlierTest from the car package gives the
+most extreme observation based on the given model.'
+
+```{r}
+car::outlierTest(m3)
+car::outlierTest(m4)
+car::outlierTest(m6)
+car::outlierTest(m7)
+car::outlierTest(m8)
+car::outlierTest(m10)
+car::outlierTest(model4)
+```
+
+Running the outlierTest on the six predictors of our working model
+individually, reveals the index point for investigation. m3: identifies
+518, m4: identifies 391, m6: identifies 833, m7: identifies 900, m8:
+identifies 460, m10: identifies 1470 Moreover, the overall regression
+model identifies 833 as the most extreme observation based on the given
+model.
+
+We now move to examine these points closer, looking at
+influenceIndexPlot to investigate the Cook's Distance, Studentized
+residuals, and Hat_values. 
+Cook's distance: The cook's distance providesthe estimate of the influence of a data point. By taking into account both leverage and residual of the observation, cook's distance is the summary of how much the regression model changes when the observation is removed.\
+Studentized Residuals: The studentized residual is the residual divided by its standard deviation. Thus, they quantify how large the residuals are in standard deviation units, and allow for easier identification of outliers.\ 
+Hat values: Hat values are the fitted values, the predictions made by the model for each observed values.\
+In examining all three values of the Simple Linear Regression models individually, then the Multiple Linear Regression model, and taking into account all three values and the respective detected observations, a final list of outliers will be formed.\
+
+Influence index Plots  to determine outliers:
+
+```{r, fig.width=12, fig.height=5}
+
+influenceIndexPlot(m3)
+influenceIndexPlot(m4)
+influenceIndexPlot(m6)
+influenceIndexPlot(m7)
+influenceIndexPlot(m8)
+influenceIndexPlot(m10)
+influenceIndexPlot(model4)
+
+```
+
+m3: high cook's distance for 152, 589\
+m4: high hat_values for 950, high bonferroni p-values for 833, and high
+studentized residual for 833\
+m6: high cook's distance and hat_values for 152, high bonferroni
+p-values for 152, 833\
+m7: high hat_values and cook's distance for 653\
+m8: no noticeable concern\
+m10: high cook's distance for 282 and 1375/ High hat_values for 838
+
+The decision is to remove the observations with index 152, 653, 833, and
+838.
+
+```{r}
+to.rm <- c(152, 653, 833, 838)
+newer_wine_quality_red_data <- wine_quality_red_data[-to.rm,]
+rownames(newer_wine_quality_red_data) <- NULL
+
+```
+
+Examine how the removal of the 4 points will effect the each predictor
+variable case by case. The only predictor variable whom R-squared value
+did not improve was m10: regressing quality on I(chlorides\^(-1/2)).
+
+```{r, echo = FALSE}
+m3newer<- lm(quality~ph, data = newer_wine_quality_red_data)
+
+m4newer=lm(quality~log(volatile_acidity), data = newer_wine_quality_red_data)
+
+m6newer=lm(quality~log(sulphates), data = newer_wine_quality_red_data)
+
+m7newer=lm(quality~log(alcohol), data = newer_wine_quality_red_data)
+
+
+m8newer=lm(quality~sqrt(citric_acid), data = newer_wine_quality_red_data)
+
+
+m10newer=lm(quality~I(chlorides^(-1/2)), data = newer_wine_quality_red_data)
+
+```
+
+New m3: R-squared value of new model: 0.003963 vs old model's: 0.003333\
+m3 is lm(quality\~ph)\
+
+New m4: R-squared value of new model: 0.1546 vs old model's: 0.1531\
+m4 is lm(quality\~log(volatile_acidity)\
+
+New m6: R-squared value of new model: 0.1063 vs old model's: 0.09526\
+m6 is lm(quality\~log(sulphates)\
+
+New m7: R-squared value of new model: 0.02308 vs old model's: 0.2275\
+m7 is lm(quality\~ph)\
+
+New m8: R-squared value of new model: 0.04556 vs old model's: 0.04272\
+m8 is lm(quality\~sqrt(citric_acid)\
+
+New m10: R-squared value of new model: 0.03159 vs old model's: 0.03593\
+m10 is lm(quality\~I(chlorides\^(-1/2))\
+
+Now examine the full model with those outliers removed:
+
+```{r}
+model4newer<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) 
+                 + sqrt(citric_acid) + I(chlorides^(-1/2)), 
+                 data = newer_wine_quality_red_data)
+summary(model4newer)
+
+```
+
+Model4newer R-squared value is 0.3625, whereas Model4 R-squared value is
+0.3541. It seems that the new model performs more reliable. However,
+outliers correction can only do so much, as a 0.3625 R-squared value is
+till quite low.
+
+Perhaps we can consider dropping the I(chlorides\^(-1/2)) predictor in
+general. We will conduct an F-test of the full model and the lesser
+model.
+
+```{r}
+model5newer<- lm(quality ~ ph + log(volatile_acidity) + log(sulphates) + log(alcohol) 
+                 + sqrt(citric_acid), data = newer_wine_quality_red_data)
+anova(model5newer, model4newer)
+```
+
+The anova test suggests that we should not remove I(chlorides\^(-1/2)),
+as we reject the Null Hypothesis. It would be better to leave the
+predictor in our model, and accept the removal of the 4 outliers, though
+decreased the R-Squared value within the simple linear regression of
+quality onto I(chlorides\^(-1/2)), a view on the multiple linear
+regression level suggests the removal of the outliers contributes better
+to the overall model. We will leave I(chlorides\^(-1/2)) within the full
+model and move accept fully the elimination of the four outliers.
+
+Final Model #1 for Red Wine dataset:
+
+```{r}
+model4newer$coefficients
+```
+
+The ANOVA method is not the sole method to build the best models. Below,
+we will consider multiple different approaches.
+
+Another Model: Interaction terms\
+We did not choose to implement interaction terms in our method because
+we believed the problems of multicollinearity between our independent
+variables would be further complicated when creating interaction terms.
+Since we decide to drop the two predictors with high issues of
+multicollinearity, we do not feel it necessary to approach and
+complicate the model further with interaction terms, they are simply not
+of interest for our model. And because we do not have any categorical
+predictors, we do not see the implementation to produce an effective
+model.
+
+Another Model: In terms of using a method such as Weighted Least
+Squares, we believe the usage of Ordinary Least Squares is sufficient in
+this project due to the constant variance achieved through our
+transformation.
+
+Another model: Forward selection with transformed variables for AIC
+(Akaike Information Criterion)
+
+```{r, echo = FALSE}
+TRfixed_acidity = log(wine_quality_red_data$fixed_acidity)
+TRvolatile_acidity=log(wine_quality_red_data$volatile_acidity)
+TRcitric_acid = sqrt(wine_quality_red_data$citric_acid)
+TRresidual_sugar=(wine_quality_red_data$residual_sugar)^(-1/2)
+TRchlorides = (wine_quality_red_data$chlorides)^(-1/2)
+TRfree_sulfur_dioxide = (wine_quality_red_data$free_sulfur_dioxide)^(1/3)
+TRtotal_sulfur_dioxide = log(wine_quality_red_data$total_sulfur_dioxide)
+Tdensity=wine_quality_red_data$density
+Tph=wine_quality_red_data$ph
+TRsulphates = log(wine_quality_red_data$sulphates)
+TRalcohol = log(wine_quality_red_data$alcohol)
+Tquality = wine_quality_red_data$quality
+
+
+TRwine_quality_red_data =  data.frame(TRfixed_acidity, TRvolatile_acidity, TRcitric_acid, TRresidual_sugar, TRchlorides, TRfree_sulfur_dioxide, TRtotal_sulfur_dioxide, Tdensity, Tph, TRsulphates, TRalcohol, Tquality)
+
+#define intercept-only model
+intercept_only <- lm(Tquality ~ 1, data=TRwine_quality_red_data)
+
+#define model with all predictors
+all <- lm(Tquality ~ ., data=TRwine_quality_red_data)
+forward <- step(intercept_only, direction='forward', scope=formula(all), trace=1)
+```
+
+Our AIC forward selection gives the lowest AIC value for the predictors
+and give the final model as:
+
+```{r}
+forward$anova
+forward$coefficients
+```
+
+
+Another model: Backward Elimination AIC with the transformed variables
+
+```{r, echo = FALSE}
+
+backward <- step(all, direction='backward', scope=formula(all), trace=1)
+summary(backward)
+```
+
+
+Our AIC backward selection gives the lowest AIC value for the predictors
+and give the final model as:
+
+```{r}
+backward$anova
+backward$coefficients
+```
+
+
+Another model: Stepwise with the transformed variables, allowing us to
+reduce the full model down to the following.
+
+```{r, echo = FALSE}
+library(MASS)
+model_transformed <- lm(quality ~ log(fixed_acidity) + log(volatile_acidity) + sqrt(citric_acid) + I(residual_sugar^(-0.5)) + I(chlorides^(-0.5)) + I(free_sulfur_dioxide^(-0.5)) + log(total_sulfur_dioxide) + density + ph + 
+            log(sulphates) + log(alcohol) , data = wine_quality_red_data)
+summary(model_transformed)
+step.modeltr <- stepAIC(model_transformed, direction = "both", 
+                      trace = FALSE)
+```
+
+```{r}
+summary(step.modeltr)
+```
+
+
+Another model: Forward selection with transformed variables for BIC
+(Bayesian Information Criterion)
+
+```{r, echo = FALSE}
+sample_size <- nrow(wine_quality_red_data)
+BIC_modelfor <- stepAIC(fullmodel, direction = "forward",
+         criterion = c("BIC"),
+         trace = 0,
+         k = log(sample_size))
+BIC(BIC_modelfor)
+summary(BIC_modelfor)
+```
+
+
+Our BIC forward selection gives:
+
+```{r}
+BIC_modelfor$anova
+BIC_modelfor$coefficients
+```
+
+
+Another model: Backward Elimination BIC with the transformed variables
+
+```{r, echo = FALSE}
+BIC_modelback <- stepAIC(fullmodel, direction = "backward",
+         criterion = c("BIC"),
+         trace = 0,
+         k = log(sample_size))
+BIC(BIC_modelback)
+summary(BIC_modelback)
+```
+
+```{r}
+BIC_modelback$anova
+BIC_modelback$coefficients
+```
+
+
+Transformed BIC Model w/ Stepwise
+
+```{r, echo = FALSE}
+library(MASS)
+BIC(fullmodel)
+sample_size <- nrow(wine_quality_red_data)
+BIC_model <- stepAIC(fullmodel, direction = "both",
+         criterion = c("BIC"),
+         trace = 0,
+         k = log(sample_size))
+BIC(BIC_model)
+summary(BIC_model)
+```
+
+```{r}
+BIC_model$anova
+BIC_model$coefficients
+```
+
+\newpage
+#### The seven Final models:
+
+```{r}
+
+coefficients(model4newer)
+coefficients(forward)
+coefficients(backward)
+coefficients(step.modeltr)
+coefficients(BIC_modelback)
+coefficients(BIC_modelfor)
+coefficients(BIC_model)
+
+```
+
+#### Select Best Model:
+
+We use K-Fold Cross Validation to decided the best model and specify the
+cross-validation method (repeat 3 times).
+
+```{r, echo = FALSE}
+library(caret)
+
+ctrl <- trainControl(method = "repeatedcv",
+                            number = 10, repeats = 3)
+
+model_cv1 <- train(quality ~ ph + log(volatile_acidity) + log(sulphates) + 
+    log(alcohol) + sqrt(citric_acid) + I(chlorides^(-1/2)), data = newer_wine_quality_red_data, method = "lm", trControl = ctrl)
+
+model_cv2 <- train(Tquality ~ TRalcohol + TRvolatile_acidity + TRsulphates + 
+    TRchlorides + Tph + TRtotal_sulfur_dioxide + TRfree_sulfur_dioxide, 
+    data = TRwine_quality_red_data, method = "lm", trControl = ctrl)
+
+model_cv3 <- train(Tquality ~ TRfixed_acidity + TRvolatile_acidity + 
+    TRcitric_acid + TRresidual_sugar + TRchlorides + TRfree_sulfur_dioxide + 
+    TRtotal_sulfur_dioxide + Tdensity + Tph + TRsulphates + TRalcohol, 
+    data = TRwine_quality_red_data, method = "lm", trControl = ctrl)
+
+model_cv4 <- train(quality ~ log(volatile_acidity) + I(chlorides^(-0.5)) + 
+    I(free_sulfur_dioxide^(-0.5)) + log(total_sulfur_dioxide) + 
+    ph + log(sulphates) + log(alcohol), data = wine_quality_red_data, method = "lm", trControl = ctrl)
+```
+
+Viewing the summary of k-fold CV, the best fit model should have small
+RMSE&MAE and large R-square.
+
+```{r}
+par(mfrow = c(2,2))
+print(model_cv1)
+print(model_cv2)
+print(model_cv3)
+print(model_cv4)
+```
+
+Therefore, our best model is
+
+```{r}
+summary(model4newer)
+```
+
+Furthermore, Looking at the R-squared values for the above models, the
+range of the R-squared values are between 0.3522 and 0.3625. With our
+two best models, providing the two highest R-squared values being:
+model4newer, from ANOVA, and step.modeltr, from AIC analysis.
+
+#### Alternative methods: General Linear Regression
+
+In considering our response variable quality is in integer scaled and
+skewed residual plot of variables. Our group advised that a try of using
+generalized linear model can help. Instead of requiring strictly normal
+distribution of residual, generalized linear model allows a variety of
+other distributions from the exponential family of residual. Here, we
+try logistic regression as a family of generalized linear model.
+
+Logistic regression fits into a sigmoid function might be good.
+Different from the assumptions of linear regression, logistic does not
+require to hold linearity, normality, and homoscedasticity. However,
+dependent variable needs to be binary and ordinal.
+
+Here we advise two ways to run the logistic regression. In the first
+method, quality is converted into binomial variable. Inspired by
+original scatter plots of quality and predictors, we notice that quality
+valued at 6 is like a watershed of inferior and superior. Moreover,
+statistically proved by the summary of quality column, we can see 6 is
+the median. Thus, in the first method, we convert quality into inferior
+and superior group. It helps us to answer our guiding question: what
+physicochemical properties influence the quality score of wine?
+
+For the second method, categorical variable type of wine in white or red
+becomes response variable in logistic regression. We believe it will
+benefit us to answer our guiding question that whether we can
+differentiate red and white wine by proportion of chemicals it contains?
+
+First method below:
+
+```{r}
+redw <- read.csv(file="wine_quality_red.csv")
+whitew <- read.csv(file="wine_quality_white.csv")
+
+summary(redw$quality)
+redw$new = ifelse(redw$quality>6,1,0)
+```
+
+At first, we fit the full model, where we have AIC 894.88.
+
+```{r}
+reg <- glm(new~fixed_acidity+volatile_acidity+citric_acid+residual_sugar+chlorides+free_sulfur_dioxide+total_sulfur_dioxide+density+ph+sulphates+alcohol,redw,family = binomial)
+summary(reg)
+```
+
+Then, we drop the highly-correlated variables and non-significant
+variables. We reach the model below.
+
+```{r, echo = FALSE}
+reg2 <- glm(formula = new ~ fixed_acidity + volatile_acidity + residual_sugar + fixed_acidity + density + sulphates + alcohol, data = redw,family = binomial)
+```
+
+```{r}
+summary(reg2)
+1-pchisq(1269.92-872.08,8)
+```
+
+Interpretation toward result of logistic regression: the null deviance
+tells us how well the response variable can be predicted by a model with
+only intercept. The residual deviance shows how well the response can be
+predicted when predictors are included.
+
+The difference between the two deviance is dropping deviance with the
+chi-squared distribution. Our null: there is no difference in a
+deviation between null deviance and residual deviance. Based on the
+p-value of 0, we fail to reject the null that there is a difference in
+deviance.
+
+Second method below:
+
+```{r}
+redw <- read.csv(file="wine_quality_red.csv")
+redw$redwine = 1
+whitew$redwine = 0
+wine <- rbind(redw,whitew)
+reg3 <- glm(redwine~fixed_acidity+volatile_acidity+citric_acid+residual_sugar+chlorides+free_sulfur_dioxide+total_sulfur_dioxide+density+ph+sulphates+alcohol+quality,wine,family = binomial)
+summary(reg3) #450
+
+reg4 <- glm(redwine~volatile_acidity+citric_acid+residual_sugar+chlorides+free_sulfur_dioxide+total_sulfur_dioxide+density+sulphates+alcohol,wine,family = binomial)
+summary(reg4) #451
+1-pchisq(7250.98-431.73,9)
+```
+
+For the second method, we combine two datasets and use categorical
+variable white or red wine as response variable for logistic regression.
+
+As result, we fail to reject the null that there is a difference in
+deviance.
+
+Conclusion for trying generalized linear model(GLM): Two logistic
+regressions that we tried are not meaningful from the p-value of the
+chi-squared test. The failure might cause by three possibilities. First
+is the ignorance of GLM assumptions. Second, the standard that we used
+for dropping variables is collinearity and significance. There might be
+better stats or tests to use as standards for dropping. Third, utilizing
+the p-value from the chi-squared test to decide may not be suitable or
+best for deciding the significance of the whole model. We expected to
+learn more about GLM in the future.
+
+\newpage
+#### Model building: White wine dataset
+
+We now proceed to analyze our White wine samples in the same manner as
+we have analyzed the Red wine samples. Instead of implementing all 7
+models, we will implement the analysis of the two best red wine models
+on our white wine dataset. These two best models were through ANOVA and
+AIC analysis.
+
+```{r, echo = FALSE}
+wine_quality_white_data <- read.csv(file="wine_quality_white.csv",as.is=T, header=T)
+w <- data.frame(fixed_acidity = wine_quality_white_data$fixed_acidity, volatile_acidity = wine_quality_white_data$volatile_acidity, citric_acid = wine_quality_white_data$citric_acid, residual_sugar = wine_quality_white_data$residual_sugar, chlorides = wine_quality_white_data$chlorides, free_sulfur_dioxide = wine_quality_white_data$free_sulfur_dioxide, total_sulfur_dioxide = wine_quality_white_data$total_sulfur_dioxide, density = wine_quality_white_data$density, ph = wine_quality_white_data$ph, sulphates = wine_quality_white_data$sulphates, alcohol = wine_quality_white_data$alcohol, quality = wine_quality_white_data$quality)
+```
+
+```{r, fig.width=15, fig.height=15}
+plot(w) 
+
+```
+
+Below shows the histogram of our transformed predictors:
+
+```{r, echo = FALSE}
+par(mar = c(2, 2, .5, .5))
+par(mfrow = c(2,2))
+hist(log(wine_quality_white_data$fixed_acidity), cex.main =.7)
+hist(log(wine_quality_white_data$volatile_acidity), cex.main =.7)
+hist(sqrt(wine_quality_white_data$total_sulfur_dioxide), cex.main =.7) 
+hist(log(wine_quality_white_data$ph), cex.main =.7)
+```
+
+```{r, echo = FALSE}
+par(mar = c(3, 3, 0.5, 0.5))
+par(mfrow = c(3,2))
+hist(log(wine_quality_white_data$sulphates), cex.main =.8)
+hist((wine_quality_white_data$alcohol)^(-1/2), cex.main =.8) 
+hist(sqrt(wine_quality_white_data$citric_acid), cex.main =.8)
+hist(sqrt(wine_quality_white_data$residual_sugar), cex.main =.8)
+hist((wine_quality_white_data$chlorides)^(-1/3), cex.main =.8)
+hist((wine_quality_white_data$free_sulfur_dioxide)^(1/2), cex.main =.8)
+```
+
+Important to note is the omission of the histogram of the variable
+density from the plots above. We decided to drop the predictor density
+because it is highly correlated with residual_sugar, and we have tried
+all power transformation on density, yet no transformation normalized
+it. Thus, we arrive at the full model:
+
+```{r}
+fullmodelW<- lm(wine_quality_white_data$quality ~ log(wine_quality_white_data$ph) 
+                + log(wine_quality_white_data$volatile_acidity) 
+                + log(wine_quality_white_data$sulphates) 
+                + I(wine_quality_white_data$alcohol^(-1/2)) 
+                + sqrt(wine_quality_white_data$citric_acid) 
+                + sqrt(wine_quality_white_data$residual_sugar) 
+                + I(wine_quality_white_data$chlorides^(-1/3)) 
+                + I(wine_quality_white_data$free_sulfur_dioxide^(1/2)))
+coefficients(fullmodelW)
+```
+
+\newpage
+Next, begin reducing the model through the removal of predictors due to
+non-signifant p-values. The above model shows that the coefficient of
+predictor citric acid is nonsignificant to our model.
+
+```{r, echo = FALSE}
+model2W<- lm(wine_quality_white_data$quality ~ log(wine_quality_white_data$ph) + log(wine_quality_white_data$volatile_acidity) + log(wine_quality_white_data$sulphates) 
+             + I(wine_quality_white_data$alcohol^(-1/2)) + sqrt(wine_quality_white_data$residual_sugar) + I(wine_quality_white_data$chlorides^(-1/3)) 
+             + I(wine_quality_white_data$free_sulfur_dioxide^(1/2)))
+anova(model2W, fullmodelW)
+```
+
+Performing the ANOVA test suggests to drop the predictor citric acid.
+Given the p-value of 0.9383, we fail to reject the NH.
+
+Thus, all predictors, after the removal of the predictors density and
+citric acid, are now significant, allowing the analysis to reach the
+final model with intercept and coefficients:
+
+```{r}
+coefficients(model2W)
+```
+
+\newpage
+Outliers check: Similar to the methods for outliers checking in the red
+wine data set, the same is implemented for white wine.
+
+Below are the simple linear regression models checked that will be
+checked individually for outliers.
+
+```{r}
+w1=lm(wine_quality_white_data$quality~log(wine_quality_white_data$ph))
+w2=lm(wine_quality_white_data$quality~
+        log(wine_quality_white_data$volatile_acidity))
+w3=lm(wine_quality_white_data$quality~log(wine_quality_white_data$sulphates))
+w4=lm(wine_quality_white_data$quality~I(wine_quality_white_data$alcohol^(-1/2)))
+w5=lm(wine_quality_white_data$quality~sqrt(wine_quality_white_data$residual_sugar))
+w6=lm(wine_quality_white_data$quality~I(wine_quality_white_data$chlorides^(-1/3)))
+w7=lm(wine_quality_white_data$quality~
+I(wine_quality_white_data$free_sulfur_dioxide^(1/2)))
+```
+
+The influenceIndexPlot to examine Cook's Distance, Studentized
+Residuals, and Hat_Values
+
+```{r, fig.width=9, fig.height=5}
+influenceIndexPlot(w1)
+influenceIndexPlot(w2)
+influenceIndexPlot(w3)
+influenceIndexPlot(w4)
+influenceIndexPlot(w5)
+influenceIndexPlot(w6)
+influenceIndexPlot(w7)
+```
+
+For w1: high cook's distance at 1689 and 251\
+For w2: high cook's distance at 28, high hat_values at 4040\
+for w3: no outliers detected\
+for w4: high cook's distance at 3902 and 741\
+for w5: high hat_values at 2782\
+for w6: high cook's distance at 3774 and 3902\
+for w7: high cook's distance and hat_values at 4746\
+
+```{r, fig.width=9, fig.height=5}
+influenceIndexPlot(model2W)
+```
+
+And directly above is the influenceIndexPlot for the multiple linear
+regression model, which shows high cook's distance and hat_values at
+4746, and high hat_values at 2782.
+
+The decision is to remove the observations with index 28, 251, 741,
+1689, 2782, 3774, 3902, 4040, 4746.
+
+```{r}
+to.remove <- c(1689, 251, 28, 4040, 3902, 741, 2782, 4746, 3774)
+newer_wine_quality_white_data <- wine_quality_white_data[-to.remove,]
+rownames(newer_wine_quality_white_data) <- NULL
+```
+
+```{r, echo = FALSE}
+model2Wnewer<- lm(newer_wine_quality_white_data$quality ~ log(newer_wine_quality_white_data$ph) + log(newer_wine_quality_white_data$volatile_acidity) + log(newer_wine_quality_white_data$sulphates) + I(newer_wine_quality_white_data$alcohol^(-1/2)) + sqrt(newer_wine_quality_white_data$residual_sugar) + I(newer_wine_quality_white_data$chlorides^(-1/3)) + I(newer_wine_quality_white_data$free_sulfur_dioxide^(1/2)))
+
+summary(model2Wnewer)
+
+```
+
+After dropping the outliers, the R-squared values of the regression
+model improved from 0.2742 to 0.2795. This demonstrates that the removal
+of these outliers of potentially high residual and high leverage has
+improved the model. Next, we move to our second best model analysis
+method: AIC.
+
+AIC Stepwise variable selection:
+
+```{r, echo = FALSE}
+library(MASS)
+winequality_white = wine_quality_white_data
+colnames(winequality_white)=c("fixed.acidity", "volatile.acidity", "citric.acid",        "residual.sugar", "chlorides", "free.sulfur.dioxide","total.sulfur.dioxide", "density", "pH", "sulphates", "alcohol", "quality")
+model_transformed <- lm(quality ~ log(fixed.acidity) + log(volatile.acidity) + sqrt(citric.acid) + sqrt(residual.sugar) + I(chlorides^(-1/3)) + sqrt(free.sulfur.dioxide) + sqrt(total.sulfur.dioxide) + density + log(pH) + 
+            log(sulphates) + I(alcohol^(-0.5)) , data = winequality_white)
+summary(model_transformed)
+
+step.modelW <- stepAIC(model_transformed, direction = "both", 
+                      trace = FALSE)
+summary(step.modelW)
+cat("The AIC value of the final model is ", extractAIC(step.modelW)[2], "with", extractAIC(step.modelW)[1]-1,"regressors")
+```
+
+```{r}
+step.modelW$anova
+step.modelW$coefficients 
+```
+
+Forward variable selection
+
+```{r, echo = FALSE}
+TRfixed_acidity = log(winequality_white$fixed.acidity)
+TRvolatile_acidity=log(winequality_white$volatile.acidity)
+TRcitric_acid = sqrt(winequality_white$citric.acid)
+TRresidual_sugar=(winequality_white$residual.sugar)^(1/2)
+TRchlorides = (winequality_white$chlorides)^(-1/3)
+TRfree_sulfur_dioxide = (winequality_white$free.sulfur.dioxide)^(1/2)
+TRtotal_sulfur_dioxide = sqrt(winequality_white$total.sulfur.dioxide)
+Tdensity=winequality_white$density
+Tph=log(winequality_white$pH)
+TRsulphates = log(winequality_white$sulphates)
+TRalcohol = (winequality_white$alcohol)^(-1/2)
+Tquality = winequality_white$quality
+
+
+TRwinequality_white =  data.frame(TRfixed_acidity, TRvolatile_acidity, TRcitric_acid, TRresidual_sugar, TRchlorides, TRfree_sulfur_dioxide, TRtotal_sulfur_dioxide, Tdensity, Tph, TRsulphates, TRalcohol, Tquality)
+
+#define intercept-only model
+intercept_only <- lm(Tquality ~ 1, data=TRwinequality_white)
+
+#define model with all predictors
+allW <- lm(Tquality ~ ., data=TRwinequality_white)
+forwardW <- step(intercept_only, direction='forward', scope=formula(allW), trace=0)
+summary(forwardW)
+
+step(intercept_only, direction='forward', scope=formula(all), trace=1)
+cat("The AIC value of the final model is ", extractAIC(forwardW)[2], "with", extractAIC(forwardW)[1]-1,"regressors")
+```
+
+```{r}
+forwardW$anova
+forwardW$coefficients
+
+```
+
+Backward Elimination:
+
+```{r, echo = FALSE}
+backwardW <- step(all, direction='backward', scope=formula(allW), trace=1)
+summary(backwardW)
+cat("The AIC value of the final model is ", extractAIC(backwardW)[2], "with", extractAIC(backwardW)[1]-1,"regressors")
+```
+
+```{r}
+backwardW$anova
+backwardW$coefficients
+```
+For the data related to white, the 3 variable selection methods shown above that use the AIC criterion give models with all the 11 regressors, i.e. without eliminating any of the regressors. However, the R-squared values produced is only 0.2869 and has an AIC value of -2822.955.
+
+
+
+We have come to two best models, each for the two data sets. Below, we
+will discuss and interpret the models on a deeper level and work our way
+to answering our guiding question.
+
+#### Discussion toward red wine final model
+
+```{r, echo = FALSE}
+summary(model4newer)
+```
+
+Based on our final choice of model, ph, log(volatile_acidity),
+log(sulphates), log(alcohol), square(citric_acid), and negative square
+root(chlorides). We believe these six variables explain our red wine
+quality best in our many tries. In our final model for red wine, looking
+at residuals, two pairs of max and min, 75%(3Q) and 25%(1Q) lines are
+almost symmetric. It shows that our data points spread fairly well
+validating with residual plot before. Viewing the slope sign of
+variables, we notice that intercept, ph, log(volatile_acidity), and
+square(citric_acid) have negative correlation with quality score. Higher
+ph might bring a bitter taste. Statistically, keeping all other
+variables the same, one increasing unit in ph will decrease the quality
+grades by 0.61499. Higher volatile acidity brings unpleasant vinegar
+taste. Keeping other variables same, with one percentage increase in
+volatile acidity, the grades of wine quality will lower by 0.53754. Both
+ph and volatile acidity fit with logical sense. Surprisingly, citric
+acid as adding freshness and flavor to the wine is supposed to be
+positive. The actual negative sign shows the fact that the large amount
+of citric acid might bring an unpleasant taste to the wine instead of
+making it better.
+
+Similarly, one-percent increase in sulphates and alcohol leads to
+increases in quality rank by 0.77403 and 3.27477 respectively. One more
+unit square root of citric acid will decrease the ranking of wine
+quality by 0.21635 units. One more unit inverse of square root of
+chlorides will increase the ranking of wine quality by 0.11452. Among
+three components that make positive impacts on the red wine quality,
+alcohol brings the strongest positive effects. People might generally
+favor more alcohol containing wine. More SO2 in the wine also has a
+positive influence. Chlorides represent the amount of salt in the wine.
+Even it has a positive sign, reminding the reciprocal, smaller chlorides
+and less salty taste of wine will have a higher quality score.
+
+Furthermore, besides intercept, we get almost all included explanatory
+variables significantly. Note that the non-significant intercept does
+not pose an issue to the validity of our model. The non-significant
+intercept is quite meaningless given that not all our predictors will
+take on the value of 0, thus whether we have sufficient statistical
+evidence that the intercept is different from zero is not relevant
+information. Though, it might infer that perhaps we need more relevant
+data to better predict the wine quality score, besides the given
+chemical compositions. From adjusted R-squared, we know about 36.25% of
+the variability in quality score between different wines can be
+explained by the linear association that we display in this final model.
+Here, we use adjusted one instead of multiple R-squared to take account
+of overfitting. Our fairly small p-value of F-stats show the stronger
+evidence against null. In other words, the smaller probability of
+getting an F-statistic greater than the value actually observed.
+
+#### Discussion toward white wine final model
+
+The best models forn white wine were the 3 variable selection methods shown above that use the AIC criterion give models with all the 11 regressors, i.e. without eliminating any of the regressors. However, the R-squared values produced is only 0.2869 and has an AIC value of -2822.955. Whereas the ANOVA method for white wine only 0.2795. 
+
+#### Conlusion
+
+Wine quality scores are related to chemical compositions. A lower level
+of volatile acidity, chlorides,citric acid, pH and higher level of
+sulphates and alcohol could generally result in better wine tasting.
+
+Since both models for red and white wine yielded very small p-values
+they cannot support the hypothesis that the physicochemical properties
+of wine have an influence on the resulting quality. However, we can
+still gain some insight about the differences between our red and white
+wine models by comparing their summaries. Red wine had a noticeably
+higher R-squared value of 0.363 compared to whites 0.28. The two models
+share 4 variables in common of which 2 utilized the same transformation,
+volatile acidity & sulphates. The estimated coefficient for volatile
+acidity is very similar between models with red having -0.5375 and white
+-0.56284.
+
+#### Motivation and Further Improvements
+
+Beyond the general understanding that alcohol is in wine, two wine
+quality datasets provide us with a professional view into chemical
+composition of wine. Moreover, quality of wine can possibly related with
+serious chemistry. All those new aspects attract us to choose wine
+quality datasets. While we browsed the dataset at first time, we notice
+the explantory variables of homogeneous chemical compositions are
+usually contrasted sharply with human tasting score. Because chemistry
+can represent rational, human tasting is more about emotional. The huge
+difference and possible difficulties that we might encounter in the
+analysis further motivate us to use this dataset and face the
+challenges.
+
+As we perceived the challenges when we picked up the dataset, the whole
+project brings surprising growth for every member in our group. We have
+a consensus that group project explore our world to more than simple or
+multivariate linear model. The class-based knowledge is more familiar to
+us by discussing and questioning in group discussion. The difficulty of
+handling real data give our a warning to choose and constructing model
+more carefully.
+
+For our analysis, there are several possible further improvements.
+First, there are more than 4898 samples of white wine, whereas there are
+only 1599 samples of red wine available. If there were more resources,
+the group would wish to collect more samples of red wine, matching the
+number of white wine samples, in order to carry out a more fair analysis
+in comparing the two types of wine as well as more accuracy for the red
+wine analysis.
+
+Second, the quality data is median of 3 tasters. Quality score might be
+biased and implicitly influence our final model.
+
+Third, as the wine samples are from the north of Portugal, with further
+resources, we would hope to add other variables such as the specific
+regions of the north of Portugal the samples belong to, the price of the
+wine bottle of the samples, and the years the wine samples were made, as
+these are very important variables which affect how one would attribute
+to the quality of the wine. An even more crucial variable would be the
+type of grapes that were used for the wine samples, as this would
+greatly influence the physicochemical elements and color of the
+resulting wine. Perhaps the white wine samples were all made from a
+specific type of yellow grape, while all the red wine samples were from
+a specific type of purple grape; we would like to collect this
+information to understand the biases of our samples.
+
+Fourth, there are more analysis types that we can use to approach, such
+as time series analysis. If we can historical data to predict the wine
+quality. We can see systemic patterns in the quality of particular wine
+quality of the region. This will allow us to investigate seasonal
+changes in accordance with wine harvesting and wine quality.
+
+\
+\
+\
+\
